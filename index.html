@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Structural Virology Lab</title>
+
+<style>
+:root {
+  --bg: linear-gradient(135deg, #5b2cff, #8a4fff);
+  --text: #ffffff;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  overflow-x: hidden;
+}
+
+nav {
+  position: fixed;
+  width: 100%;
+  top: 0;
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  padding: 15px;
+  background: rgba(0,0,0,0.2);
+  z-index: 10;
+}
+
+nav a {
+  color: white;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+section {
+  min-height: 100vh;
+  padding: 100px 40px;
+}
+
+#home {
+  position: relative;
+}
+
+.hero {
+  max-width: 800px;
+  position: relative;
+  z-index: 2;
+}
+
+h1 { font-size: 3rem; }
+
+canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px,1fr));
+  gap: 20px;
+}
+
+.card {
+  background: rgba(255,255,255,0.1);
+  padding: 15px;
+  border-radius: 10px;
+  backdrop-filter: blur(10px);
+}
+</style>
+</head>
+
+<body>
+
+<nav>
+  <a href="#home">Home</a>
+  <a href="#research">Research</a>
+  <a href="#members">Members</a>
+  <a href="#projects">Projects</a>
+  <a href="#contact">Contact</a>
+</nav>
+
+<section id="home">
+  <div class="hero">
+    <h1>Structural Virology Lab</h1>
+    <p><b>Uncoating Enveloped Secrets</b></p>
+    <p>Dr. Tirumal Kumar Chowdary</p>
+  </div>
+  <canvas id="canvas"></canvas>
+</section>
+
+<section id="research"><h1>Research</h1></section>
+<section id="members"><h1>Members</h1><div class="grid" id="membersGrid"></div></section>
+<section id="projects"><h1>Projects</h1><div class="grid" id="projectsGrid"></div></section>
+<section id="contact"><h1>Contact</h1><div id="contactBox"></div></section>
+
+<script>
+// DATA
+const members = [{name:"Your Name", role:"PhD Student"}];
+const projects = [{title:"Virus Entry", desc:"Fusion"}];
+const contact = {email:"lab@email.com", address:"Institute"};
+
+members.forEach(m=>membersGrid.innerHTML+=`<div class="card"><h3>${m.name}</h3><p>${m.role}</p></div>`);
+projects.forEach(p=>projectsGrid.innerHTML+=`<div class="card"><h3>${p.title}</h3><p>${p.desc}</p></div>`);
+contactBox.innerHTML = `<div class="card">${contact.email}<br>${contact.address}</div>`;
+
+// CANVAS
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+let mouse = {x:canvas.width/2, y:canvas.height/2};
+window.addEventListener("mousemove", e=>{
+  mouse.x = e.clientX;
+  mouse.y = e.clientY;
+});
+
+class Virus {
+  constructor(){
+    this.x = Math.random()*canvas.width;
+    this.y = Math.random()*canvas.height;
+    this.r = 15 + Math.random()*10;
+    this.dx = (Math.random()-0.5)*0.3;
+    this.dy = (Math.random()-0.5)*0.3;
+    this.depth = Math.random(); // for parallax
+    this.rot = Math.random()*Math.PI;
+  }
+
+  move(){
+    // parallax motion
+    this.x += this.dx * (0.5 + this.depth);
+    this.y += this.dy * (0.5 + this.depth);
+
+    // mouse interaction
+    let dx = this.x - mouse.x;
+    let dy = this.y - mouse.y;
+    let dist = Math.sqrt(dx*dx + dy*dy);
+
+    if(dist < 120){
+      this.x += dx * 0.02;
+      this.y += dy * 0.02;
+    }
+
+    this.rot += 0.005;
+
+    if(this.x<0||this.x>canvas.width) this.dx*=-1;
+    if(this.y<0||this.y>canvas.height) this.dy*=-1;
+  }
+
+  draw(){
+    ctx.save();
+
+    // depth blur
+    ctx.globalAlpha = 0.3 + this.depth;
+
+    ctx.translate(this.x,this.y);
+    ctx.rotate(this.rot);
+
+    // blur effect
+    ctx.shadowColor = "white";
+    ctx.shadowBlur = 20 * this.depth;
+
+    // body
+    ctx.beginPath();
+    ctx.arc(0,0,this.r,0,Math.PI*2);
+    ctx.strokeStyle="white";
+    ctx.stroke();
+
+    // spikes
+    let spikes = 14;
+    for(let i=0;i<spikes;i++){
+      let a = i*(Math.PI*2/spikes);
+      let x1 = Math.cos(a)*this.r;
+      let y1 = Math.sin(a)*this.r;
+      let x2 = Math.cos(a)*(this.r+8);
+      let y2 = Math.sin(a)*(this.r+8);
+
+      ctx.beginPath();
+      ctx.moveTo(x1,y1);
+      ctx.lineTo(x2,y2);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(x2,y2,2,0,Math.PI*2);
+      ctx.fillStyle="white";
+      ctx.fill();
+    }
+
+    ctx.restore();
+  }
+}
+
+let viruses = [];
+function init(){
+  viruses=[];
+  for(let i=0;i<30;i++) viruses.push(new Virus());
+}
+
+function animate(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  viruses.forEach(v=>{v.move(); v.draw();});
+  requestAnimationFrame(animate);
+}
+
+init(); animate();
+
+window.addEventListener("resize",()=>{
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  init();
+});
+</script>
+
+</body>
+</html>
