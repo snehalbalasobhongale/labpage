@@ -7,18 +7,19 @@
 
 <style>
 :root {
-  --bg: linear-gradient(135deg, #5b2cff, #8a4fff);
-  --text: #ffffff;
+  --bg: linear-gradient(135deg, #6a00ff, #4fc3f7);
+  --text: white;
 }
 
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
-  color: var(--text);
+  font-family: Arial;
   background: var(--bg);
+  color: var(--text);
   overflow-x: hidden;
 }
 
+/* NAV */
 nav {
   position: fixed;
   width: 100%;
@@ -27,8 +28,8 @@ nav {
   justify-content: center;
   gap: 30px;
   padding: 15px;
-  background: rgba(0,0,0,0.2);
-  z-index: 10;
+  background: rgba(255,255,255,0.1);
+  backdrop-filter: blur(10px);
 }
 
 nav a {
@@ -37,41 +38,90 @@ nav a {
   font-weight: bold;
 }
 
-section {
-  min-height: 100vh;
-  padding: 100px 40px;
-}
-
+/* HERO */
 #home {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+
+/* VIRUS */
+.virus-container {
+  position: relative;
+  width: 300px;
+  height: 300px;
+  margin-top: 40px;
+}
+
+.virus {
+  width: 100%;
+  height: 100%;
+  border: 2px solid white;
+  border-radius: 50%;
   position: relative;
 }
 
-.hero {
-  max-width: 800px;
-  position: relative;
-  z-index: 2;
-}
-
-h1 { font-size: 3rem; }
-
-canvas {
+/* genome */
+.genome {
   position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 0;
+  width: 80px;
+  height: 80px;
+  border: 2px dashed white;
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px,1fr));
-  gap: 20px;
+/* spikes */
+.spike {
+  position: absolute;
+  width: 4px;
+  height: 30px;
+  background: white;
+  top: -30px;
+  left: 50%;
+  transform-origin: bottom;
+  cursor: pointer;
 }
 
-.card {
-  background: rgba(255,255,255,0.1);
-  padding: 15px;
+.spike::after {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: -4px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: white;
+}
+
+/* popup */
+.popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0,0,0,0.9);
+  padding: 20px;
   border-radius: 10px;
-  backdrop-filter: blur(10px);
+  display: none;
+  max-width: 400px;
+  text-align: center;
+}
+
+.popup img {
+  width: 100%;
+  border-radius: 8px;
+}
+
+.close {
+  margin-top: 10px;
+  cursor: pointer;
+  color: cyan;
 }
 </style>
 </head>
@@ -80,142 +130,66 @@ canvas {
 
 <nav>
   <a href="#home">Home</a>
-  <a href="#research">Research</a>
-  <a href="#members">Members</a>
-  <a href="#projects">Projects</a>
-  <a href="#contact">Contact</a>
 </nav>
 
 <section id="home">
-  <div class="hero">
-    <h1>Structural Virology Lab</h1>
-    <p><b>Uncoating Enveloped Secrets</b></p>
-    <p>Dr. Tirumal Kumar Chowdary</p>
+  <h1>Structural Virology Lab</h1>
+  <p><b>Uncoating Enveloped Secrets</b></p>
+  <p>Dr. Tirumal Kumar Chowdary</p>
+
+  <!-- VIRUS -->
+  <div class="virus-container">
+    <div class="virus" id="virus"></div>
+    <div class="genome" onclick="showGenome()"></div>
   </div>
-  <canvas id="canvas"></canvas>
 </section>
 
-<section id="research"><h1>Research</h1></section>
-<section id="members"><h1>Members</h1><div class="grid" id="membersGrid"></div></section>
-<section id="projects"><h1>Projects</h1><div class="grid" id="projectsGrid"></div></section>
-<section id="contact"><h1>Contact</h1><div id="contactBox"></div></section>
+<!-- POPUP -->
+<div class="popup" id="popup">
+  <div id="popupContent"></div>
+  <div class="close" onclick="closePopup()">Close</div>
+</div>
 
 <script>
-// DATA
-const members = [{name:"Your Name", role:"PhD Student"}];
-const projects = [{title:"Virus Entry", desc:"Fusion"}];
-const contact = {email:"lab@email.com", address:"Institute"};
+// CREATE SPIKES
+const virus = document.getElementById("virus");
 
-members.forEach(m=>membersGrid.innerHTML+=`<div class="card"><h3>${m.name}</h3><p>${m.role}</p></div>`);
-projects.forEach(p=>projectsGrid.innerHTML+=`<div class="card"><h3>${p.title}</h3><p>${p.desc}</p></div>`);
-contactBox.innerHTML = `<div class="card">${contact.email}<br>${contact.address}</div>`;
+for(let i=0;i<20;i++){
+  let spike = document.createElement("div");
+  spike.className = "spike";
 
-// CANVAS
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+  let angle = (360/20)*i;
+  spike.style.transform = `rotate(${angle}deg) translate(-50%)`;
 
-let mouse = {x:canvas.width/2, y:canvas.height/2};
-window.addEventListener("mousemove", e=>{
-  mouse.x = e.clientX;
-  mouse.y = e.clientY;
-});
+  spike.onclick = showEnvelope;
 
-class Virus {
-  constructor(){
-    this.x = Math.random()*canvas.width;
-    this.y = Math.random()*canvas.height;
-    this.r = 15 + Math.random()*10;
-    this.dx = (Math.random()-0.5)*0.3;
-    this.dy = (Math.random()-0.5)*0.3;
-    this.depth = Math.random(); // for parallax
-    this.rot = Math.random()*Math.PI;
-  }
-
-  move(){
-    // parallax motion
-    this.x += this.dx * (0.5 + this.depth);
-    this.y += this.dy * (0.5 + this.depth);
-
-    // mouse interaction
-    let dx = this.x - mouse.x;
-    let dy = this.y - mouse.y;
-    let dist = Math.sqrt(dx*dx + dy*dy);
-
-    if(dist < 120){
-      this.x += dx * 0.02;
-      this.y += dy * 0.02;
-    }
-
-    this.rot += 0.005;
-
-    if(this.x<0||this.x>canvas.width) this.dx*=-1;
-    if(this.y<0||this.y>canvas.height) this.dy*=-1;
-  }
-
-  draw(){
-    ctx.save();
-
-    // depth blur
-    ctx.globalAlpha = 0.3 + this.depth;
-
-    ctx.translate(this.x,this.y);
-    ctx.rotate(this.rot);
-
-    // blur effect
-    ctx.shadowColor = "white";
-    ctx.shadowBlur = 20 * this.depth;
-
-    // body
-    ctx.beginPath();
-    ctx.arc(0,0,this.r,0,Math.PI*2);
-    ctx.strokeStyle="white";
-    ctx.stroke();
-
-    // spikes
-    let spikes = 14;
-    for(let i=0;i<spikes;i++){
-      let a = i*(Math.PI*2/spikes);
-      let x1 = Math.cos(a)*this.r;
-      let y1 = Math.sin(a)*this.r;
-      let x2 = Math.cos(a)*(this.r+8);
-      let y2 = Math.sin(a)*(this.r+8);
-
-      ctx.beginPath();
-      ctx.moveTo(x1,y1);
-      ctx.lineTo(x2,y2);
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.arc(x2,y2,2,0,Math.PI*2);
-      ctx.fillStyle="white";
-      ctx.fill();
-    }
-
-    ctx.restore();
-  }
+  virus.appendChild(spike);
 }
 
-let viruses = [];
-function init(){
-  viruses=[];
-  for(let i=0;i<30;i++) viruses.push(new Virus());
+// SHOW ENVELOPE FUNCTION
+function showEnvelope(){
+  document.getElementById("popup").style.display = "block";
+  document.getElementById("popupContent").innerHTML = `
+    <h2>Viral Envelope Interaction</h2>
+    <img src="https://upload.wikimedia.org/wikipedia/commons/6/6f/Coronavirus_spike.png">
+    <p>Envelope proteins bind host receptors enabling viral entry.</p>
+  `;
 }
 
-function animate(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  viruses.forEach(v=>{v.move(); v.draw();});
-  requestAnimationFrame(animate);
+// SHOW GENOME FUNCTION
+function showGenome(){
+  document.getElementById("popup").style.display = "block";
+  document.getElementById("popupContent").innerHTML = `
+    <h2>Genome Replication & Packaging</h2>
+    <img src="https://upload.wikimedia.org/wikipedia/commons/3/3f/Viral_replication_cycle.png">
+    <p>Viral genome replicates and assembles into new virions.</p>
+  `;
 }
 
-init(); animate();
-
-window.addEventListener("resize",()=>{
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  init();
-});
+// CLOSE POPUP
+function closePopup(){
+  document.getElementById("popup").style.display = "none";
+}
 </script>
 
 </body>
